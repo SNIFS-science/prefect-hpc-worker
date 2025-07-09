@@ -1,0 +1,10 @@
+#! /bin/bash
+
+#SBATCH --contraint=cpu
+#SBATCH --qos={qos}
+#SBATCH --time {max_wall_time}
+#SBATCH --nodes {nodes}
+#SBATCH --account {project}
+#SBATCH --job-name {name}
+
+podman-hpc run --rm {image}:{tag}

@@ -1,0 +1,48 @@
+[project]
+name = "slurm-worker"
+version = "0.1.0"
+description = "A Prefect worker to enable scheduling flows on HPC system via SLURM"
+readme = "README.md"
+authors = [
+    { name = "Samuel Hinton", email = "samuelreay@gmail.com" },
+]
+requires-python = ">=3.13"
+
+dependencies = [
+    "anyio>=4.9.0",
+    "prefect>=3.3.1",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+]
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=8.3.0",
+    "ruff>=0.5.4,<1",
+    "pre-commit>=3.7.0",
+]
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+extend-select = ["F", "E", "W", "C", "I", "B", "T"]
+extend-ignore = ["T201"]
+
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["F401"]
+
+[tool.prefect]
+logging.level = "INFO"
+server.ephemeral.enabled = true
+
+[tool.pytest.ini_options]
+addopts = "-v"
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore::DeprecationWarning:prefect.*",
+    "ignore::DeprecationWarning:_griffe.*",
+]
+pythonpath = ["src"]
