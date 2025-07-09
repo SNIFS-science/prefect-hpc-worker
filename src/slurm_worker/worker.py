@@ -11,11 +11,11 @@ CPU_COMMAND = (
     "--nodes {nodes} "
     "--account {project} "
     "--job-name {name} "
-    "podman-hpc run --rm {image}:{tag}"
+    "podman-hpc run --rm --entrypoint {entrypoint} {image}:{tag}"
 )
 
 
-class SlurmWorkerConfiguration(BaseSettings):
+class NerscWorkerConfiguration(BaseSettings):
     time_between_queries: int = Field(
         default=30,
         description="Time in seconds between job status queries. "
@@ -24,9 +24,17 @@ class SlurmWorkerConfiguration(BaseSettings):
     )
 
 
-class SlurmJobConfiguration(BaseJobConfiguration):
+class NerscJobConfiguration(BaseJobConfiguration):
     image: str = Field(
-        description="Docker image to.",
+        description="Docker image to repo",
+    )
+    tag: str = Field(
+        default="latest",
+        description="Docker image tag to use for the job.",
+    )
+    name: str = Field(
+        default="prefect-job",
+        description="Name of the job to use for the job.",
     )
     project: str = Field(
         default="default",
@@ -50,26 +58,26 @@ class SlurmJobConfiguration(BaseJobConfiguration):
         default=1024,
         description="Memory in MB to allocate.",
     )
-    walltime: int = Field(
+    max_walltime: int = Field(
         default=3600,
         description="Maximum wall time in seconds.",
     )
 
 
-class SlurmTemplateVariables(BaseVariables):
+class NerscTemplateVariables(BaseVariables):
     pass
 
 
-class SlurmWorkerResult(BaseWorkerResult):
+class NerscWorkerResult(BaseWorkerResult):
     pass
 
 
-class SlurmWorker(BaseWorker[SlurmJobConfiguration, SlurmTemplateVariables, SlurmWorkerResult]):
+class NerscWorker(BaseWorker[NerscJobConfiguration, NerscTemplateVariables, NerscWorkerResult]):
     type: str = "slurm"
-    job_configuration = SlurmJobConfiguration
-    job_configuration_variables = SlurmTemplateVariables
+    job_configuration = NerscJobConfiguration
+    job_configuration_variables = NerscTemplateVariables
 
-    _display_name = "Slurm"
+    _display_name = "nersc"
     _logo_url = "https://static.wikia.nocookie.net/enfuturama/images/d/df/Slurmlogo.png"
 
     async def run(
@@ -77,14 +85,14 @@ class SlurmWorker(BaseWorker[SlurmJobConfiguration, SlurmTemplateVariables, Slur
         flow_run: FlowRun,
         configuration: BaseJobConfiguration,
         task_status: TaskStatus | None = None,
-    ) -> SlurmWorkerResult:
+    ) -> NerscWorkerResult:
         if task_status is not None:
             task_status.started()
 
         # Simulate job execution
         await self.run_flow(flow=flow_run)
 
-        return SlurmWorkerResult(status_code=0, identifier="fake_identifier")
+        return NerscWorkerResult(status_code=0, identifier="fake_identifier")
 
     async def run_flow(self, flow: FlowRun) -> None:
         pass
