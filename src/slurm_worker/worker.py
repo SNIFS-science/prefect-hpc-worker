@@ -13,6 +13,7 @@ CPU_COMMAND = (
     "--nodes {nodes} "
     "--account {project} "
     "--job-name {name} "
+    "--mem {memory} "
     "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {image}:{tag}"
 )
 
