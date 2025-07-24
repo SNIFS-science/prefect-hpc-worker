@@ -1,7 +1,9 @@
+import asyncio
+
 from anyio.abc import TaskStatus
 from prefect.client.schemas.objects import FlowRun
 from prefect.workers.base import BaseJobConfiguration, BaseVariables, BaseWorker, BaseWorkerResult
-from pydantic import Field
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings
 
 CPU_COMMAND = (
@@ -11,7 +13,7 @@ CPU_COMMAND = (
     "--nodes {nodes} "
     "--account {project} "
     "--job-name {name} "
-    "podman-hpc run --rm --entrypoint {entrypoint} {image}:{tag}"
+    "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {image}:{tag}"
 )
 
 
@@ -62,6 +64,18 @@ class NerscJobConfiguration(BaseJobConfiguration):
         default=3600,
         description="Maximum wall time in seconds.",
     )
+    volumes: list[tuple[str, str, str]] = Field(
+        default_factory=list,
+        description="List of volumes to mount in the format (host_path, container_path, options). "
+        "Example: [('/host/path', '/container/path', 'rw')]",
+    )
+
+    @property
+    @computed_field
+    def volume_str(self) -> str:
+        return " ".join(
+            f"--volume {host_path}:{container_path}:{options}" for host_path, container_path, options in self.volumes
+        )
 
 
 class NerscTemplateVariables(BaseVariables):
@@ -83,16 +97,35 @@ class NerscWorker(BaseWorker[NerscJobConfiguration, NerscTemplateVariables, Ners
     async def run(
         self,
         flow_run: FlowRun,
-        configuration: BaseJobConfiguration,
+        configuration: NerscJobConfiguration,
         task_status: TaskStatus | None = None,
     ) -> NerscWorkerResult:
         if task_status is not None:
             task_status.started()
 
-        # Simulate job execution
-        await self.run_flow(flow=flow_run)
+        return await self.run_flow(flow=flow_run, configuration=configuration)
 
-        return NerscWorkerResult(status_code=0, identifier="fake_identifier")
+    async def run_flow(self, flow: FlowRun, configuration: NerscJobConfiguration) -> NerscWorkerResult:
+        command = CPU_COMMAND.format(configuration.model_dump())
+        self._logger.info(f"Running command: {command}")
+        proc = await asyncio.create_subprocess_shell(
+            command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await proc.communicate()
+        if stdout:
+            self._logger.info(f"Command output: {stdout.decode()}")
+        if stderr:
+            self._logger.error(f"Command error: {stderr.decode()}")
 
-    async def run_flow(self, flow: FlowRun) -> None:
-        pass
+        # Get exit status of the command
+        if proc.returncode is None:
+            self._logger.error("Command did not complete successfully, return code is None")
+            return NerscWorkerResult(status_code=-1, identifier="unknown")
+        if proc.returncode != 0:
+            self._logger.error(f"Command failed with exit code {proc.returncode}")
+
+        # TODO get the slurm id and truen this in the result
+        # TODO: figure out error handling from stdout, stderr
+        return NerscWorkerResult(status_code=proc.returncode, identifier=str(proc.pid))
