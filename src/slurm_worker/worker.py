@@ -1,10 +1,27 @@
 import asyncio
+import sys
+from typing import TYPE_CHECKING
 
+import prefect
 from anyio.abc import TaskStatus
 from prefect.client.schemas.objects import FlowRun
+from prefect.utilities.slugify import slugify
 from prefect.workers.base import BaseJobConfiguration, BaseVariables, BaseWorker, BaseWorkerResult
 from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings
+
+if TYPE_CHECKING:
+    from prefect.client.schemas.objects import Flow, FlowRun
+    from prefect.client.schemas.responses import DeploymentResponse
+
+
+def python_version_minor() -> str:
+    return f"{sys.version_info.major}.{sys.version_info.minor}"
+
+
+def python_version_micro() -> str:
+    return f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+
 
 CPU_COMMAND = (
     "sbatch --constraint=cpu "
@@ -14,8 +31,40 @@ CPU_COMMAND = (
     "--account {project} "
     "--job-name {name} "
     "--mem {memory} "
-    "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {image}:{tag}"
+    "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {env_str} {image}:{tag}"
 )
+
+
+def get_prefect_image_name(
+    prefect_version: str | None = None,
+    python_version: str | None = None,
+    flavor: str | None = None,
+) -> str:
+    """
+    Get the Prefect image name matching the current Prefect and Python versions.
+
+    Args:
+        prefect_version: An optional override for the Prefect version.
+        python_version: An optional override for the Python version; must be at the
+            minor level e.g. '3.9'.
+        flavor: An optional alternative image flavor to build, like 'conda'
+    """
+    parsed_version = (prefect_version or prefect.__version__).split("+")
+    is_prod_build = len(parsed_version) == 1
+    prefect_version = parsed_version[0] if is_prod_build else "sha-" + prefect.__version_info__["full-revisionid"][:7]
+
+    python_version = python_version or python_version_minor()
+
+    tag = slugify(
+        f"{prefect_version}-python{python_version}" + (f"-{flavor}" if flavor else ""),
+        lowercase=False,
+        max_length=128,
+        # Docker allows these characters for tag names
+        regex_pattern=r"[^a-zA-Z0-9_.-]+",
+    )
+
+    image = "prefect" if is_prod_build else "prefect-dev"
+    return f"prefecthq/{image}:{tag}"
 
 
 class NerscWorkerConfiguration(BaseSettings):
@@ -78,6 +127,45 @@ class NerscJobConfiguration(BaseJobConfiguration):
             f"--volume {host_path}:{container_path}:{options}" for host_path, container_path, options in self.volumes
         )
 
+    @property
+    @computed_field
+    def env_str(self) -> str:
+        return " ".join(f"--env {key}={value}" for key, value in self.env.items())
+
+    def _slugify_container_name(self) -> str:
+        """
+        Generates a container name to match the configured name, ensuring it is Docker
+        compatible.
+        """
+        # Must match `/?[a-zA-Z0-9][a-zA-Z0-9_.-]+` in the end
+        return slugify(
+            self.name,
+            lowercase=False,
+            # Docker does not limit length but URL limits apply eventually so
+            # limit the length for safety
+            max_length=250,
+            # Docker allows these characters for container names
+            regex_pattern=r"[^a-zA-Z0-9_.-]+",
+        ).lstrip(
+            # Docker does not allow leading underscore, dash, or period
+            "_-."
+        )
+
+    def prepare_for_flow_run(
+        self,
+        flow_run: "FlowRun",
+        deployment: "DeploymentResponse | None" = None,
+        flow: "Flow | None" = None,
+    ):
+        """
+        Prepares the agent for a flow run by setting the image, labels, and name
+        attributes.
+        """
+        super().prepare_for_flow_run(flow_run, deployment, flow)
+
+        self.image = self.image or get_prefect_image_name()
+        self.name = self._slugify_container_name()
+
 
 class NerscTemplateVariables(BaseVariables):
     pass
@@ -107,6 +195,7 @@ class NerscWorker(BaseWorker[NerscJobConfiguration, NerscTemplateVariables, Ners
         return await self.run_flow(flow=flow_run, configuration=configuration)
 
     async def run_flow(self, flow: FlowRun, configuration: NerscJobConfiguration) -> NerscWorkerResult:
+        configuration.prepare_for_flow_run(flow)
         command = CPU_COMMAND.format(configuration.model_dump())
         self._logger.info(f"Running command: {command}")
         proc = await asyncio.create_subprocess_shell(
