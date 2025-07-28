@@ -89,7 +89,7 @@ class NerscJobConfiguration(BaseJobConfiguration):
         description="Name of the job to use for the job.",
     )
     project: str = Field(
-        default="default",
+        default="m112",
         description="Project name to use for the job for billing.",
     )
     qos: str = Field(
