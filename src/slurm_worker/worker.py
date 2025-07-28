@@ -178,7 +178,7 @@ class NerscWorkerResult(BaseWorkerResult):
 class NerscWorker(BaseWorker[NerscJobConfiguration, NerscTemplateVariables, NerscWorkerResult]):
     type: str = "slurm"
     job_configuration = NerscJobConfiguration
-    job_configuration_variables = NerscTemplateVariables
+    # job_configuration_variables = NerscTemplateVariables
 
     _display_name = "nersc"
     _logo_url = "https://static.wikia.nocookie.net/enfuturama/images/d/df/Slurmlogo.png"
