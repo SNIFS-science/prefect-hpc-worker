@@ -33,7 +33,7 @@ CPU_COMMAND = (
     "--mem {memory} "
     "--cpus-per-task {processes_per_node} "
     "--ntasks {tasks} "
-    "--output %A.log "
+    "--output slurm_%A.log "
     "podman-hpc run --rm {volume_str} {env_str} {image} {command}"
 )
 
