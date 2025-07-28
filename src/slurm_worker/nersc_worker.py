@@ -26,7 +26,7 @@ def python_version_micro() -> str:
 CPU_COMMAND = (
     "sbatch --constraint=cpu "
     "--qos={qos} "
-    "--time {max_wall_time} "
+    "--time {max_walltime} "
     "--nodes {nodes} "
     "--account {project} "
     "--job-name {name} "
@@ -120,6 +120,11 @@ class NerscJobConfiguration(BaseJobConfiguration):
         "Example: [('/host/path', '/container/path', 'rw')]",
     )
 
+    entrypoint: str | None = Field(
+        default="/bin/bash",
+        description="Entrypoint to use for the container. This should be set in the deployment",
+    )
+
     @property
     @computed_field
     def volume_str(self) -> str:
@@ -162,7 +167,8 @@ class NerscJobConfiguration(BaseJobConfiguration):
         attributes.
         """
         super().prepare_for_flow_run(flow_run, deployment, flow)
-
+        if deployment is not None:
+            self.entrypoint = deployment.entrypoint
         self.image = self.image or get_prefect_image_name()
         self.name = self._slugify_container_name()
 
