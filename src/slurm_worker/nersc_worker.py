@@ -31,6 +31,8 @@ CPU_COMMAND = (
     "--account {project} "
     "--job-name {name} "
     "--mem {memory} "
+    "--cpus-per-task {processes_per_node} "
+    "--ntasks {tasks} "
     "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {env_str} {image}"
 )
 
@@ -97,6 +99,11 @@ class NerscJobConfiguration(BaseJobConfiguration):
     nodes: int = Field(
         default=1,
         description="Number of nodes to allocate for the job.",
+    )
+    tasks: int = Field(
+        default=1,
+        description="Number of tasks to allocate for the job. "
+        "This is the number of processes that will run in parallel.",
     )
     processes_per_node: int = Field(
         default=1,
