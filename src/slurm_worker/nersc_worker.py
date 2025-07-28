@@ -125,15 +125,15 @@ class NerscJobConfiguration(BaseJobConfiguration):
         description="Entrypoint to use for the container. This should be set in the deployment",
     )
 
-    @property
     @computed_field
+    @property
     def volume_str(self) -> str:
         return " ".join(
             f"--volume {host_path}:{container_path}:{options}" for host_path, container_path, options in self.volumes
         )
 
-    @property
     @computed_field
+    @property
     def env_str(self) -> str:
         return " ".join(f"--env {key}={value}" for key, value in self.env.items())
 
