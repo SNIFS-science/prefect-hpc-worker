@@ -172,7 +172,7 @@ class NerscWorkerResult(BaseWorkerResult):
 
 
 class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerResult]):
-    type: str = "slurm"
+    type: str = "nersc"
     job_configuration = NerscJobConfiguration
 
     _display_name = "nersc"

@@ -48,4 +48,4 @@ filterwarnings = [
 pythonpath = ["src"]
 
 [project.entry-points."prefect.collections"]
-slurm = "slurm_worker.worker"
+nersc = "slurm_worker.nersc_worker"
