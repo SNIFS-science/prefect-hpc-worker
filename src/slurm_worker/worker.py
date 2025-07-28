@@ -167,18 +167,13 @@ class NerscJobConfiguration(BaseJobConfiguration):
         self.name = self._slugify_container_name()
 
 
-class NerscTemplateVariables(BaseVariables):
-    pass
-
-
 class NerscWorkerResult(BaseWorkerResult):
     pass
 
 
-class NerscWorker(BaseWorker[NerscJobConfiguration, NerscTemplateVariables, NerscWorkerResult]):
+class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerResult]):
     type: str = "slurm"
     job_configuration = NerscJobConfiguration
-    # job_configuration_variables = NerscTemplateVariables
 
     _display_name = "nersc"
     _logo_url = "https://static.wikia.nocookie.net/enfuturama/images/d/df/Slurmlogo.png"
