@@ -190,30 +190,34 @@ class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerRe
         return await self.run_flow(flow=flow_run, configuration=configuration)
 
     async def run_flow(self, flow: FlowRun, configuration: NerscJobConfiguration) -> NerscWorkerResult:
-        configuration.prepare_for_flow_run(flow)
-        values = configuration.model_dump()
-        self._logger.info(f"Running flow with configuration: {values}")
-        self._logger.info(f"Formatting CPU command: {CPU_COMMAND}")
-        command = CPU_COMMAND.format(**values)
-        self._logger.info(f"Running command: {command}")
-        proc = await asyncio.create_subprocess_shell(
-            command,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-        if stdout:
-            self._logger.info(f"Command output: {stdout.decode()}")
-        if stderr:
-            self._logger.error(f"Command error: {stderr.decode()}")
+        try:
+            configuration.prepare_for_flow_run(flow)
+            values = configuration.model_dump()
+            self._logger.info(f"Running flow with configuration: {values}")
+            self._logger.info(f"Formatting CPU command: {CPU_COMMAND}")
+            command = CPU_COMMAND.format(**values)
+            self._logger.info(f"Running command: {command}")
+            proc = await asyncio.create_subprocess_shell(
+                command,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+            stdout, stderr = await proc.communicate()
+            if stdout:
+                self._logger.info(f"Command output: {stdout.decode()}")
+            if stderr:
+                self._logger.error(f"Command error: {stderr.decode()}")
 
-        # Get exit status of the command
-        if proc.returncode is None:
-            self._logger.error("Command did not complete successfully, return code is None")
+            # Get exit status of the command
+            if proc.returncode is None:
+                self._logger.error("Command did not complete successfully, return code is None")
+                return NerscWorkerResult(status_code=-1, identifier="unknown")
+            if proc.returncode != 0:
+                self._logger.error(f"Command failed with exit code {proc.returncode}")
+
+            # TODO get the slurm id and truen this in the result
+            # TODO: figure out error handling from stdout, stderr
+            return NerscWorkerResult(status_code=proc.returncode, identifier=str(proc.pid))
+        except Exception as e:
+            self._logger.error(f"Error running flow: {e}")
             return NerscWorkerResult(status_code=-1, identifier="unknown")
-        if proc.returncode != 0:
-            self._logger.error(f"Command failed with exit code {proc.returncode}")
-
-        # TODO get the slurm id and truen this in the result
-        # TODO: figure out error handling from stdout, stderr
-        return NerscWorkerResult(status_code=proc.returncode, identifier=str(proc.pid))
