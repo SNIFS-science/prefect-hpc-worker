@@ -31,4 +31,4 @@ docker_prefect:
 
 run:
 	uv pip install -e .
-	uv run prefect worker start --type slurm --pool slurm
+	uv run prefect worker start --type nersc --pool slurm
