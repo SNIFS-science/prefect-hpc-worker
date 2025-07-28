@@ -31,7 +31,7 @@ CPU_COMMAND = (
     "--account {project} "
     "--job-name {name} "
     "--mem {memory} "
-    "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {env_str} {image}:{tag}"
+    "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {env_str} {image}"
 )
 
 
@@ -79,10 +79,6 @@ class NerscWorkerConfiguration(BaseSettings):
 class NerscJobConfiguration(BaseJobConfiguration):
     image: str = Field(
         description="Docker image to repo",
-    )
-    tag: str = Field(
-        default="latest",
-        description="Docker image tag to use for the job.",
     )
     name: str = Field(
         default="prefect-job",
