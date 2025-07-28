@@ -191,7 +191,10 @@ class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerRe
 
     async def run_flow(self, flow: FlowRun, configuration: NerscJobConfiguration) -> NerscWorkerResult:
         configuration.prepare_for_flow_run(flow)
-        command = CPU_COMMAND.format(configuration.model_dump())
+        values = configuration.model_dump()
+        self._logger.info(f"Running flow with configuration: {values}")
+        self._logger.info(f"Formatting CPU command: {CPU_COMMAND}")
+        command = CPU_COMMAND.format(**values)
         self._logger.info(f"Running command: {command}")
         proc = await asyncio.create_subprocess_shell(
             command,
