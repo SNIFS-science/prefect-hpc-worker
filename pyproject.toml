@@ -47,5 +47,5 @@ filterwarnings = [
 ]
 pythonpath = ["src"]
 
-[tool.entry-points.plugins."prefect.collections"]
-"slurm" = "slurm_worker.worker"
+[project.entry-points."prefect.collections"]
+slurm = "slurm_worker.worker"
