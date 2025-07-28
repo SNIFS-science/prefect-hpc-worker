@@ -34,7 +34,7 @@ CPU_COMMAND = (
     "--cpus-per-task {processes_per_node} "
     "--ntasks {tasks} "
     "--output %A.log "
-    "podman-hpc run --rm --command {command} --entrypoint {entrypoint} {volume_str} {env_str} {image}"
+    "podman-hpc run --rm {volume_str} {env_str} {image} {command}"
 )
 
 
