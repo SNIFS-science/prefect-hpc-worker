@@ -33,7 +33,8 @@ CPU_COMMAND = (
     "--mem {memory} "
     "--cpus-per-task {processes_per_node} "
     "--ntasks {tasks} "
-    "podman-hpc run --rm --entrypoint {entrypoint} {volume_str} {env_str} {image}"
+    "--output %A.log "
+    "podman-hpc run --rm --command {command} --entrypoint {entrypoint} {volume_str} {env_str} {image}"
 )
 
 
@@ -125,7 +126,11 @@ class NerscJobConfiguration(BaseJobConfiguration):
 
     entrypoint: str | None = Field(
         default="/bin/bash",
-        description="Entrypoint to use for the container. This should be set in the deployment",
+        description="Entrypoint to use for the container",
+    )
+    command: str | None = Field(
+        default=None,
+        description="Command to run in the container.",
     )
 
     @computed_field
