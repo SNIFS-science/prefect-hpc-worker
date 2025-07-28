@@ -24,7 +24,7 @@ def python_version_micro() -> str:
 
 
 CPU_COMMAND = (
-    "sbatch --constraint=cpu "
+    "srun --constraint=cpu "
     "--qos={qos} "
     "--time {max_walltime} "
     "--nodes {nodes} "
