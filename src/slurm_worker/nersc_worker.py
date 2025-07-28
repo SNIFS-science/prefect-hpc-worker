@@ -26,7 +26,7 @@ def python_version_micro() -> str:
 CPU_COMMAND = (
     "srun --constraint=cpu "
     "--qos={qos} "
-    "--time {max_walltime} "
+    "--time {max_walltime_str} "
     "--nodes {nodes} "
     "--account {project} "
     "--job-name {name} "
@@ -123,7 +123,6 @@ class NerscJobConfiguration(BaseJobConfiguration):
         description="List of volumes to mount in the format (host_path, container_path, options). "
         "Example: [('/host/path', '/container/path', 'rw')]",
     )
-
     entrypoint: str | None = Field(
         default="/bin/bash",
         description="Entrypoint to use for the container",
@@ -144,6 +143,14 @@ class NerscJobConfiguration(BaseJobConfiguration):
         return " ".join(
             f"--volume {host_path}:{container_path}:{options}" for host_path, container_path, options in self.volumes
         )
+
+    @computed_field
+    @property
+    def max_walltime_str(self) -> str:
+        # Turns a number of seconds into a string formatted as HH:MM:SS
+        hours, remainder = divmod(self.max_walltime, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        return f"{hours:02}:{minutes:02}:{seconds:02}"
 
     @computed_field
     @property
