@@ -46,3 +46,6 @@ filterwarnings = [
     "ignore::DeprecationWarning:_griffe.*",
 ]
 pythonpath = ["src"]
+
+[tool.entry-points.plugins."prefect.collections"]
+"slurm" = "slurm_worker.worker"
