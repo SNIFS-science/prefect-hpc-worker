@@ -193,7 +193,7 @@ class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerRe
         try:
             configuration.prepare_for_flow_run(flow)
             values = configuration.model_dump()
-            self._logger.info(f"Running flow with configuration: {values}")
+            self._logger.info(f"Running flow with configuration: {configuration.model_dump_json(indent=2)}")
             self._logger.info(f"Formatting CPU command: {CPU_COMMAND}")
             command = CPU_COMMAND.format(**values)
             self._logger.info(f"Running command: {command}")
