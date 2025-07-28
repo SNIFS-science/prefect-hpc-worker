@@ -7,7 +7,7 @@ from anyio.abc import TaskStatus
 from prefect.client.schemas.objects import FlowRun
 from prefect.utilities.slugify import slugify
 from prefect.workers.base import BaseJobConfiguration, BaseVariables, BaseWorker, BaseWorkerResult
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings
 
 if TYPE_CHECKING:
@@ -139,6 +139,17 @@ class NerscJobConfiguration(BaseJobConfiguration):
     @property
     def env_str(self) -> str:
         return " ".join(f"--env {key}={value}" for key, value in self.env.items())
+
+    @field_validator("volumes")
+    @classmethod
+    def _validate_volumes(cls, volumes: list[tuple[str, str, str]]) -> list[tuple[str, str, str]]:
+        for item in volumes:
+            assert len(item) == 3, "Each volume must be a tuple of (host_path, container_path, options)"
+            host_path, container_path, options = item
+            assert host_path.startswith("/"), "Host path must be an absolute path starting with '/'"
+            assert container_path.startswith("/"), "Container path must be an absolute path starting with '/'"
+            assert options in ("ro", "rw"), "Options must be either 'ro' or 'rw'"
+        return volumes
 
     def _slugify_container_name(self) -> str:
         """
