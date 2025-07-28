@@ -132,6 +132,11 @@ class NerscJobConfiguration(BaseJobConfiguration):
         default=None,
         description="Command to run in the container.",
     )
+    env: dict[str, str] = Field(
+        default_factory=dict,
+        title="Environment Variables",
+        description="Environment variables to set when starting a flow run.",
+    )
 
     @computed_field
     @property
