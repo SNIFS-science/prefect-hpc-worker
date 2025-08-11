@@ -29,6 +29,7 @@ install: install_uv install_python install_deps install_precommit
 docker_prefect:
 	docker run -p 4200:4200 --env PREFECT_SERVER_API_HOST="0.0.0.0" prefecthq/prefect:3-latest prefect server start
 
+run: export PREFECT_API_URL="http://prefect.prefect-pipelines.production.svc.spin.nersc.org/api"
 run:
 	uv pip install -e .
 	uv run prefect worker start --type nersc --pool slurm
