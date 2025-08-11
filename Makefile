@@ -31,4 +31,4 @@ docker_prefect:
 
 run:
 	uv pip install -e .
-	uv run prefect work-pool create --set-as-default --type nersc nersc; uv run prefect worker start --type nersc --pool nersc
+	uv run prefect work-pool create --overwrite --set-as-default --type nersc nersc; uv run prefect worker start --type nersc --pool nersc
