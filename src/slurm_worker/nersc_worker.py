@@ -26,14 +26,14 @@ def python_version_micro() -> str:
 CPU_COMMAND = (
     "srun --constraint=cpu "
     "--qos={qos} "
-    "--time {max_walltime_str} "
-    "--nodes {nodes} "
-    "--account {project} "
-    "--job-name {name} "
-    "--mem {memory} "
-    "--cpus-per-task {processes_per_node} "
-    "--ntasks {tasks} "
-    "--output slurm_%A.log "
+    "--time={max_walltime_str} "
+    "--nodes={nodes} "
+    "--account={project} "
+    "--job-name={name} "
+    "--mem={memory} "
+    "--cpus-per-task={processes_per_node} "
+    "--ntasks={tasks} "
+    "--output=slurm_%A.log "
     "podman-hpc run --rm {volume_str} {env_str} {image} {command}"
 )
 
