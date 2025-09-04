@@ -260,7 +260,15 @@ class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerRe
         script = CPU_SCRIPT.format(**values)
         self._logger.info(f"Submitting script:\n{script}")
 
-        client_secret = JsonWebKey.import_key(json.loads(self.settings.sfapi_secret))
+        try:
+            content = json.loads(self.settings.sfapi_secret)
+            client_secret = JsonWebKey.import_key(content)
+        except json.JSONDecodeError as e:
+            self._logger.error(
+                f"Error decoding SFAPI client secret: {e}. Start of secret is {self.settings.sfapi_secret[:20]}"
+            )
+            return NerscWorkerResult(status_code=-1, identifier="unknown")
+
         async with AsyncClient(self.settings.sfapi_id, client_secret) as client:  # type: ignore
             perlmutter = await client.compute(Machine.perlmutter)
             job = await perlmutter.submit_job(script)
