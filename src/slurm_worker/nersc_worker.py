@@ -94,9 +94,12 @@ class NerscWorkerConfiguration(BaseSettings):
         "See https://docs.nersc.gov/jobs/best-practices/#limit-your-queries-to-the-batch-system",
         # Note try to use sacct https://docs.nersc.gov/jobs/monitoring/#sacct for monitoring jobs
     )
-    sfapi_id: str = Field(default="", description="SFAPI client ID")
+    sfapi_id: str = Field(description="SFAPI client ID", min_length=5)
     sfapi_secret: str = Field(
-        default="", description="SFAPI client secret", exclude=True, examples=['{"kty": "RSA", "n": ...}']
+        description="SFAPI client secret",
+        exclude=True,
+        examples=['{"kty": "RSA", "n": ...}'],
+        min_length=20,
     )
 
     model_config = SettingsConfigDict(case_sensitive=False)
