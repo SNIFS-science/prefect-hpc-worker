@@ -1,9 +1,11 @@
 import asyncio
+import json
 import sys
 from typing import TYPE_CHECKING
 
 import prefect
 from anyio.abc import TaskStatus
+from authlib.jose import JsonWebKey
 from prefect.client.schemas.objects import FlowRun
 from prefect.utilities.slugify import slugify
 from prefect.workers.base import BaseJobConfiguration, BaseVariables, BaseWorker, BaseWorkerResult
@@ -11,9 +13,6 @@ from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings
 from sfapi_client import AsyncClient
 from sfapi_client.compute import Machine
-from authlib.jose import JsonWebKey
-import json
-
 
 if TYPE_CHECKING:
     from prefect.client.schemas.objects import Flow, FlowRun
