@@ -9,6 +9,11 @@ from prefect.utilities.slugify import slugify
 from prefect.workers.base import BaseJobConfiguration, BaseVariables, BaseWorker, BaseWorkerResult
 from pydantic import Field, computed_field, field_validator
 from pydantic_settings import BaseSettings
+from sfapi_client import AsyncClient
+from sfapi_client.compute import Machine
+from authlib.jose import JsonWebKey
+import json
+
 
 if TYPE_CHECKING:
     from prefect.client.schemas.objects import Flow, FlowRun
@@ -36,6 +41,19 @@ CPU_COMMAND = (
     "--output=slurm_%A.log "
     "podman-hpc run --rm {volume_str} {env_str} {image} {command}"
 )
+CPU_SCRIPT = """#!/bin/bash
+#SBATCH --constraint=cpu
+#SBATCH --qos={qos}
+#SBATCH --time={max_walltime_str}
+#SBATCH --nodes={nodes}
+#SBATCH --account={project}
+#SBATCH --job-name={name}
+#SBATCH --mem={memory}
+#SBATCH --cpus-per-task={processes_per_node}
+#SBATCH --ntasks={tasks}
+#SBATCH --output=slurm_%A.log
+podman-hpc run --rm {volume_str} {env_str} {image} {command}
+"""
 
 
 def get_prefect_image_name(
@@ -76,6 +94,10 @@ class NerscWorkerConfiguration(BaseSettings):
         description="Time in seconds between job status queries. "
         "See https://docs.nersc.gov/jobs/best-practices/#limit-your-queries-to-the-batch-system",
         # Note try to use sacct https://docs.nersc.gov/jobs/monitoring/#sacct for monitoring jobs
+    )
+    sfapi_id: str = Field(default="", description="SFAPI client ID")
+    sfapi_secret: str = Field(
+        default="", description="SFAPI client secret", exclude=True, examples=['{"kty": "RSA", "n": ...}']
     )
 
 
@@ -211,6 +233,7 @@ class NerscWorkerResult(BaseWorkerResult):
 class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerResult]):
     type: str = "nersc"
     job_configuration = NerscJobConfiguration
+    settings = NerscWorkerConfiguration()
 
     _display_name = "nersc"
     _logo_url = "https://static.wikia.nocookie.net/enfuturama/images/d/df/Slurmlogo.png"
@@ -224,9 +247,30 @@ class NerscWorker(BaseWorker[NerscJobConfiguration, BaseVariables, NerscWorkerRe
         if task_status is not None:
             task_status.started()
 
-        return await self.run_flow(flow=flow_run, configuration=configuration)
+        return await self.run_flow_via_sfapi(flow=flow_run, configuration=configuration)
 
-    async def run_flow(self, flow: FlowRun, configuration: NerscJobConfiguration) -> NerscWorkerResult:
+    async def run_flow_via_sfapi(self, flow: FlowRun, configuration: NerscJobConfiguration) -> NerscWorkerResult:
+        self._logger.info("Running flow via sfapi")
+
+        configuration.prepare_for_flow_run(flow)
+        values = configuration.model_dump()
+        self._logger.info(f"Running flow with configuration: {configuration.model_dump_json(indent=2)}")
+        self._logger.info(f"Formatting CPU script: {CPU_SCRIPT}")
+        script = CPU_SCRIPT.format(**values)
+        self._logger.info(f"Submitting script:\n{script}")
+
+        client_secret = JsonWebKey.import_key(json.loads(self.settings.sfapi_secret))
+        async with AsyncClient(self.settings.sfapi_id, client_secret) as client:  # type: ignore
+            perlmutter = await client.compute(Machine.perlmutter)
+            job = await perlmutter.submit_job(script)
+            await asyncio.sleep(1)
+            await job.update()
+            if job.jobid is None:
+                self._logger.error("Job submission failed, no job ID returned")
+                return NerscWorkerResult(status_code=-1, identifier="unknown")
+            return NerscWorkerResult(status_code=0, identifier=job.jobid)
+
+    async def run_flow_via_srun(self, flow: FlowRun, configuration: NerscJobConfiguration) -> NerscWorkerResult:
         try:
             configuration.prepare_for_flow_run(flow)
             values = configuration.model_dump()

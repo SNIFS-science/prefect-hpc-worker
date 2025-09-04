@@ -25,6 +25,11 @@ test:
 tests: test
 install: install_uv install_python install_deps install_precommit
 
+image:
+	docker buildx build -t prefect-hpc-worker .
+
+docker_run:
+	docker run -it --rm prefect-hpc-worker:latest
 
 docker_prefect:
 	docker run -p 4200:4200 --env PREFECT_SERVER_API_HOST="0.0.0.0" prefecthq/prefect:3-latest prefect server start
