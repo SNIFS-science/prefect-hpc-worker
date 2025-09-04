@@ -10,7 +10,7 @@ from prefect.client.schemas.objects import FlowRun
 from prefect.utilities.slugify import slugify
 from prefect.workers.base import BaseJobConfiguration, BaseVariables, BaseWorker, BaseWorkerResult
 from pydantic import Field, computed_field, field_validator
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from sfapi_client import AsyncClient
 from sfapi_client.compute import Machine
 
@@ -98,6 +98,8 @@ class NerscWorkerConfiguration(BaseSettings):
     sfapi_secret: str = Field(
         default="", description="SFAPI client secret", exclude=True, examples=['{"kty": "RSA", "n": ...}']
     )
+
+    model_config = SettingsConfigDict(case_sensitive=False)
 
 
 class NerscJobConfiguration(BaseJobConfiguration):
